@@ -5,7 +5,8 @@ function fopen_cached($name, $mode, $lock = false) // note, that arguments are n
 {
 	static $fopen_cache = array();
 	
-	if(isset($fopen_cache[$name]) && $fopen_cache[$name]['mode'] == $mode) return $fopen_cache[$name]['fp'];
+	$key = $name.':'.$mode;
+	if(isset($fopen_cache[$key])) return $fopen_cache[$key]['fp'];
 	
 	if(!($fp = fopen($name, $mode)) && is_file($name))
 	{
@@ -23,7 +24,7 @@ function fopen_cached($name, $mode, $lock = false) // note, that arguments are n
 	
 	if($lock) @flock($fp, LOCK_EX);
 	
-	$fopen_cache[$name] = array('fp'=>$fp, 'mode'=>$mode/*, 'locked'=>$lock*/);
+	$fopen_cache[$name.':'.$mode] = array('fp'=>$fp, 'mode'=>$mode/*, 'locked'=>$lock*/);
 	
 	return $fp;
 }
