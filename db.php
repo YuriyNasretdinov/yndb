@@ -19,12 +19,14 @@ require(dirname(__FILE__).'/libindex.php');
 
 class YNDb
 {
-	private $dir = '';
-	private $error = '';
-	private $ins_id = '';
-	private $I = null; /* Index instance :) */
-	//private $BTR = null; /* BTree instance */
-	//private $BTRI = null; /* BTree_Idx instance */
+	protected $dir = '';
+	protected $error = '';
+	protected $ins_id = '';
+	protected $I = null; /* Index instance :) */
+	//protected $BTR = null; /* BTree instance */
+	//protected $BTRI = null; /* BTree_Idx instance */
+	
+	protected static $instances = array(  ); // instances count for each directory
 	
 	function set_error($err)
 	{
@@ -52,7 +54,12 @@ class YNDb
 	{
 		if(!is_dir($d) || !is_writable($d)) return $this->set_error('Database directory is invalid. It must exist, be a directory and be writable.');
 		
-		$this->dir = realpath($d);
+		$rd = realpath($d);
+		
+		if(isset(self::$instances[$rd])) return false; // this behavoir is at least better than a (probably) ability to cause deadlock...
+		self::$instances[$rd] = true;
+		
+		$this->dir = $rd;
 		$this->I   = new YNIndex($this);
 		
 		return true;
@@ -60,7 +67,9 @@ class YNDb
 	
 	public function __destruct()
 	{
-		$this->I = null; // removing circular reference
+		$this->I = null; // removing circular referenceprotected
+		
+		unset(self::$instances[$this->dir]); // enabling the instance to be created again, if one would like, though it is not recommended
 	}
 	
 	/**
@@ -220,11 +229,11 @@ class YNDb
 		return true;
 	}
 	
-	private $locked_tables_list = array(
+	protected $locked_tables_list = array(
 		// 'some_table' => array( structure fields... ),
 	);
 	
-	private $locked_tables_locks_count = array(
+	protected $locked_tables_locks_count = array(
 		// 'some_table' => how many times the table was locked, // is valueable for unlock
 	);
 	
@@ -286,11 +295,11 @@ class YNDb
 		
 	}
 	
-	private function read_struct_start($name /* table name */)
+	protected function read_struct_start($name /* table name */)
 	{
 		/*if(!is_readable($this->dir.'/'.$name.'.str') || !is_readable($this->dir.'/'.$name.'.dat')) return $this->set_error('File with table structure or with table data could not be read.');*/
 		
-		$str_fp = fopen_cached($this->dir.'/'.$name.'.str', 'r+b', true /* lock the file pointer */);
+		if(!$str_fp = fopen_cached($this->dir.'/'.$name.'.str', 'r+b', true /* lock the file pointer */)) return $this->set_error('File with table structure is corrupt!');
 		//@flock($str_fp, LOCK_EX);
 		
 		fseek($str_fp, 0, SEEK_END);
@@ -320,7 +329,7 @@ class YNDb
 		);
 	}
 	
-	private function read_struct_end($res)
+	protected function read_struct_end($res)
 	{
 		/*$str_fp = $res['str_fp'];
 		@flock($str_fp, LOCK_UN);
@@ -509,7 +518,7 @@ class YNDb
 		return !isset($err);
 	}
 	
-	private function read_row($fields, $fp)
+	protected function read_row($fields, $fp)
 	{	
 		/*
 		 * the row format:
@@ -571,7 +580,7 @@ class YNDb
 		return $t;
 	}
 	
-	private function limiter($res, $limit, $cond)
+	protected function limiter($res, $limit, $cond)
 	{
 		$c = $cond[0];
 		
@@ -629,18 +638,23 @@ class YNDb
 		}
 		if(!is_array($cond)) $cond = array($cond);
 		if(!is_array($cond[0])) $cond[0] = explode(' ', $cond[0]);
-		if(!is_array($order))
-		{
-			$order = explode(' ',strtolower($order));
-			if(@$order[1] == 'desc') $order[1] = SORT_DESC;
-			else $order[1] = SORT_ASC;
-		}
 		if($col && is_string($col)) $col = array_map('trim',explode(',',$col));
 		if($col)
 		{
 			$col = array_map('strtolower', $col);
 			if(array_search('*', $col)!==false) $col = false;
 			//array_display($col);
+		}
+		if(!is_array($order))
+		{
+			$order = explode(' ',strtolower($order));
+			if(@$order[1] == 'desc') $order[1] = SORT_DESC;
+			else $order[1] = SORT_ASC;
+		}
+		
+		if($col && !in_array($order[0], $col))
+		{
+			$col[] = $order[0]; // you cannot order by a field that is not specified as columns list
 		}
 		
 		/* specially for DELETE: add field "__offset", where the offset in main table is written */
@@ -668,7 +682,7 @@ class YNDb
 			return $this->set_error($err);
 		}
 		
-		$fp = fopen_cached($this->dir.'/'.$name.'.dat', 'rb');
+		$fp = fopen_cached($this->dir.'/'.$name.'.dat', 'r+b');
 		
 		fseek($fp, 0, SEEK_END);
 		$end = ftell($fp) - 1;
@@ -687,7 +701,7 @@ class YNDb
 		{
 			$opt = 'Using PRIMARY';
 			
-			$pfp = fopen_cached($this->dir.'/'.$name.'.pri', 'rb');
+			$pfp = fopen_cached($this->dir.'/'.$name.'.pri', 'r+b');
 			
 			fseek($pfp, SEEK_END);
 			$pend = ftell($pfp);
@@ -787,7 +801,7 @@ class YNDb
 		{
 			$opt = 'Using UNIQUE';
 			
-			$ufp = fopen_cached($this->dir.'/'.$name.'.btr', 'rb');
+			$ufp = fopen_cached($this->dir.'/'.$name.'.btr', 'r+b');
 			
 			$btr = new YNBTree($this);
 			
@@ -811,8 +825,8 @@ class YNDb
 			
 			//echo $opt;
 			
-			$ifpi = fopen_cached($this->dir.'/'.$name.'.idx', 'rb');
-			$ifp  = fopen_cached($this->dir.'/'.$name.'.btr', 'rb');
+			$ifpi = fopen_cached($this->dir.'/'.$name.'.idx', 'r+b');
+			$ifp  = fopen_cached($this->dir.'/'.$name.'.btr', 'r+b');
 			
 			$btri = new YNBTree_Idx($this);
 			
