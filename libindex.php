@@ -1,9 +1,6 @@
 <?
 /* File, which contains mostly all work with indexes for YNDb
 
-   If you are to look through the code, prepare a litre of valerian (in case
-   you need it :))
-   
    P.S. This class is for internal usage only! You must NEVER call these functions
    directly from your code!
 
@@ -14,9 +11,9 @@ include('libindex-idx.php');
 
 class YNIndex
 {
-    private $DB = null; /* DB instance */
-	private $BTR = null; /* YNBTree instance */
-	private $BTRI = null; /* YNBTree_Idx instance */
+    protected $DB = null; /* DB instance */
+	public $BTR = null; /* YNBTree instance */
+	public $BTRI = null; /* YNBTree_Idx instance */
 	
 	// meta must be set explicitly for each table you work with
 	public $meta = null; /* metadata for YNBTree and YNBTree_Idx */
