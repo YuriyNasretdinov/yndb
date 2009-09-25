@@ -26,7 +26,7 @@ class YNDb
 	//protected $BTR = null; /* BTree instance */
 	//protected $BTRI = null; /* BTree_Idx instance */
 	
-	protected static $instances = array(  ); // instances count for each directory
+	public static $instances = array(  ); // instances count for each directory
 	
 	function set_error($err)
 	{
@@ -67,7 +67,7 @@ class YNDb
 	
 	public function __destruct()
 	{
-		$this->I = null; // removing circular referenceprotected
+		$this->I = null; // removing circular reference
 		
 		unset(self::$instances[$this->dir]); // enabling the instance to be created again, if one would like, though it is not recommended
 	}
