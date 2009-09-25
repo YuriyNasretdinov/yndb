@@ -3,9 +3,9 @@
 
 /* default function to limit selects */
 
-define('FULL_STOP', '');
-define('MAXLEN', pow(2,20)); // maximum length of data in bytes (default 1 MB)
-define('DBLSZ',strlen(pack('d', M_PI))); // size of DOUBLE
+define('YNDB_FULL_STOP', '');
+define('YNDB_MAXLEN', pow(2,20)); // maximum length of data in bytes (default 1 MB)
+define('YNDB_DBLSZ',strlen(pack('d', M_PI))); // size of DOUBLE
 $LIMIT_START = 0;
 $LIMIT_LEN   = 30;
 
@@ -95,7 +95,7 @@ class YNDb
 	 * INT      -- 32-bit integer ( from -2 147 483 648 to 2 147 483 647 )
 	 * TINYTEXT -- string with length less than 256           characters
 	 * TEXT     -- string with length less than 65 536        characters
-	 * LONGTEXT  -- string with length less than MAXLEN characters
+	 * LONGTEXT  -- string with length less than YNDB_MAXLEN characters
 	 * DOUBLE   -- a number with floating point
 	 * 
 	 * $params: array(
@@ -463,7 +463,7 @@ class YNDb
 						$ins .= $d;
 						break;
 					case 'LONGTEXT':
-						if(strlen($d) > MAXLEN) $d = substr($d, 0, MAXLEN);
+						if(strlen($d) > YNDB_MAXLEN) $d = substr($d, 0, YNDB_MAXLEN);
 						$ins .= pack('l', strlen($d));
 						$ins .= $d;
 						break;
@@ -568,10 +568,10 @@ class YNDb
 					break;
 				case 'LONGTEXT':
 					list(,$len) = unpack('l', fread($fp, 4));
-					$t[$k] = rtrim($len ? fread($fp, min(MAXLEN,$len)) : ''); // protection from PHP emalloc() errors 
+					$t[$k] = rtrim($len ? fread($fp, min(YNDB_MAXLEN,$len)) : ''); // protection from PHP emalloc() errors 
 					break;
 				case 'DOUBLE':
-					list(,$i) = unpack('d', fread($fp, DBLSZ));
+					list(,$i) = unpack('d', fread($fp, YNDB_DBLSZ));
 					$t[$k] = $i;
 					break;
 			}
@@ -722,6 +722,12 @@ class YNDb
 				
 				foreach($ids as $v)
 				{
+					// cannot have values that exceed auto_increment value
+					// 'acnt' contains the already-incremented counter, so
+					// we use ">=", as value 'acnt' does not also exist yet
+					if($v >= $acnt) continue;
+					if($v <= 0) continue; // only positive values are allowed
+					
 					fseek($pfp, $v*4);
 					@$i = fread($pfp, 4);
 					
@@ -857,7 +863,7 @@ class YNDb
 				$fr = call_user_func($filt, $t, $limit, $cond);
 				
 				if($fr) $res[] = $t;
-				else if($fr === FULL_STOP) break;
+				else if($fr === YNDB_FULL_STOP) break;
 			}
 		}
 		

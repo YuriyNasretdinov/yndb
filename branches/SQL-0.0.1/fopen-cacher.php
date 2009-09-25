@@ -16,7 +16,7 @@ function fopen_cached($name, $mode, $lock = false) // note, that arguments are n
 		
 		// if all is ok (file readable & writable and it is file)
 		// the we just hit the limit of max. opened files and should
-		// free a file that is stored in cache to get a room for a new entry
+		// free a file that is stored in cache to get room for a new entry
 		
 		$el=(array_shift($fopen_cache));
 		fclose($el['fp']); // fclose releases lock, if it was set

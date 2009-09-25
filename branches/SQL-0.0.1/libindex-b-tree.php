@@ -1,12 +1,15 @@
 <?
 /*
-  
   The PHP realization of B-TREES (required for libindex),
 
   based on description at
   
   http://en.wikipedia.org/wiki/B-tree and
   http://www.bluerwhite.org/btree/
+
+
+  P.S. Actually, B-Tree is one of the most difficult part of the database for a moment, but it is the most important one too.
+       So, if you are to understand the code below, read the links above carefully and try to understand how that works.
 */
 
 // minimum and maximum number of children in BTREE node
