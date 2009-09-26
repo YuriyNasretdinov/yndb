@@ -6,8 +6,8 @@
 define('YNDB_FULL_STOP', '');
 define('YNDB_MAXLEN', pow(2,20)); // maximum length of data in bytes (default 1 MB)
 define('YNDB_DBLSZ',strlen(pack('d', M_PI))); // size of DOUBLE
-$LIMIT_START = 0;
-$LIMIT_LEN   = 30;
+define('YNDB_LIMIT_START', 0); // default limit values
+define('YNDB_LIMIT_LEN',   30);
 
 define('YNDB_ROW_DELETED',  1);
 define('YNDB_ROW_SPLIT',    2);
@@ -623,7 +623,7 @@ class YNDb
 		
 		$filt = array(&$this, 'limiter'); // the filter function (see YNDb::limiter() )
 		$cond = array(array($aname, '>', 0)); /* conditions: array( array(field, operator, value), ... ) */
-		$limit = array( $GLOBALS['LIMIT_START'], $GLOBALS['LIMIT_LEN'] );
+		$limit = array( YNDB_LIMIT_START, YNDB_LIMIT_LEN );
 		$order = array($aname, SORT_ASC);
 		$col = false; /* list of columns. FALSE or '*' mean ALL fields */
 		$offsets = false;
