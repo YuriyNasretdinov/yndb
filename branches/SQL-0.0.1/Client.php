@@ -29,6 +29,14 @@ class YNResource {
 		}
 	}
 	
+	// removing circular references, so not causing a memory leak
+	public function __destruct() {
+		$this->db     = null;
+		$this->parser = null;
+		$this->sql    = null;
+		$this->plan   = null;
+	}
+	
 	public function fetch() {
 		return $this->plan->fetch();
 	}
@@ -42,6 +50,12 @@ class YNClient {
 		// eventually, YNDataInterface will support exceptions, as intended here
 		$this->db = new YNDataInterface($dir);
 		$this->parser = new YNParser($this->db);
+	}
+	
+	// removing circular references, so not causing a memory leak
+	public function __destruct() {
+		$this->db     = null;
+		$this->parser = null;
 	}
 	
 	public function query($sql) {

@@ -57,13 +57,9 @@ class YNDataInterface extends YNDb
 		// oh yeah, better use exceptions :)
 		// perhaps it will be rewritten to use them
 		
-		do
+		try
 		{
-			if(!$fp = fopen_cached($this->dir.'/'.$name.'.dat', 'r+b'))
-			{
-				$err = 'Data file corrupt.';
-				break;
-			}
+			if(!$fp = fopen_cached($this->dir.'/'.$name.'.dat', 'r+b')) throw new Exception('Data file corrupt.');
 			
 			fseek($fp, 0, SEEK_END);
 			$end = ftell($fp) - 1; // actually, I do not remember why last byte should not be read :))
@@ -72,31 +68,28 @@ class YNDataInterface extends YNDb
 			
 			fseek($fp, 0);
 			
-			if($columns)
-			{
-				$columns = $this->checkColumns($fields, $columns);
-				if(is_string($columns)) { $err = $columns; break; }
-			}
-		}while(false);
-		
-		if(isset($err))
+			$columns = $this->checkColumns($fields, $columns);
+		}catch(Exception $e)
 		{
 			$this->unlock_table($name);
-			return $this->set_error($err);
+			throw $e;
 		}
-
+		
 		return array( $name, $fp, $columns, $fields, $end );
 	}
 	
-	// checks if $columns tries to fetch only fields that exist
-	// returns string with error description in case of failure
-	// otherwise returns a flipped columns array
+	// checks, if $columns list contains only existing columns
+	// returns flipped $columns list, or $columns if $columns is equal to false
 	
-	protected function checkColumns($fields, $columns)
+	// throws exception if columns list is invalid
+	
+	protected function checkColumns($fields, $columns = false)
 	{
+		if(!$columns) return $columns;
+		
 		if(sizeof($inv = array_udiff($columns, $valid = array_keys($fields), 'strcmp')))
 		{
-			return 'Unknown column(s): '.implode(', ',$inv).'. Valid are: '.implode(', ',$valid);
+			throw new Exception('Unknown column(s): '.implode(', ',$inv).'. Valid are: '.implode(', ',$valid));
 		}
 
 		return array_flip($columns); // create an array like array( 'field1' => 0, 'field2' => 1, ... )
@@ -108,7 +101,7 @@ class YNDataInterface extends YNDb
 	
 	function fetchRow_FullScan($resource)
 	{
-		if(!$resource) return $this->set_error('Invalid resource specified');
+		if(!$resource) /*return $this->set_error*/ throw new Exception('Invalid resource specified');
 		
 		list( ,$fp, $columns, $fields, $end) = $resource;
 		
@@ -127,7 +120,7 @@ class YNDataInterface extends YNDb
 	
 	function closeTable_FullScan($resource)
 	{
-		if(!$resource) return $this->set_error('Invalid resource specified');
+		if(!$resource) /*return $this->set_error*/ throw new Exception('Invalid resource specified');
 		
 		return $this->unlock_table($resource[0] /*name*/);
 		
@@ -142,36 +135,21 @@ class YNDataInterface extends YNDb
 		
 		if(!$this->lock_table($name)) return false;
 		
-		// oh yeah, better use exceptions :)
-		// perhaps it will be rewritten to use them
-		
 		$type = false; // types can be: DI_INDEX_PRIMARY, DI_INDEX_INDEX, DI_INDEX_UNIQUE
 		$pointers = false; // if one pointer, than it is just a value. Several pointers should be presented as cortege (an ordered list)
 		
-		do
+		try
 		{
-			if(!$fp = fopen_cached($this->dir.'/'.$name.'.dat', 'r+b'))
-			{
-				$err = 'Data file corrupt.';
-				break;
-			}
+			if(!$fp = fopen_cached($this->dir.'/'.$name.'.dat', 'r+b')) throw new Exception('Data file corrupt.');
 			
 			extract(/*$str_res = */$this->locked_tables_list[$name]);
 			
 			if($col == $aname)               $type = DI_INDEX_PRIMARY;
 			else if(in_array($col, $index))  $type = DI_INDEX_INDEX;
 			else if(in_array($col, $unique)) $type = DI_INDEX_UNIQUE;
-			else
-			{
-				$err = 'No index for column `'.$col.'`"';
-				break;
-			}
+			else                             throw new Exception('No index for column `'.$col.'`"');
 			
-			if($columns)
-			{
-				$columns = $this->checkColumns($fields, $columns);
-				if(is_string($columns)) { $err = $columns; break; }
-			}
+			$columns = $this->checkColumns($fields, $columns);
 			
 			switch($type)
 			{
@@ -179,54 +157,44 @@ class YNDataInterface extends YNDb
 					
 					$pfp = fopen_cached($this->dir.'/'.$name.'.pri', 'r+b');
 					
-					if(!$pfp)
-					{
-						$err = 'Primary index corrupt';
-						break(2);
-					}
+					if(!$pfp) throw new Exception('Primary index corrupt');
 					
 					$pointers = $pfp;
+					
 					break;
 				case DI_INDEX_UNIQUE:
 				
 					$ufp = fopen_cached($this->dir.'/'.$name.'.btr', 'r+b');
 					
-					if(!$ufp)
-					{
-						$err = 'B-Tree index corrupt';
-						break(2);
-					}
+					if(!$ufp) throw new Exception('B-Tree index corrupt');
 					
 					$pointers = $ufp;
+					
 					break;
 				case DI_INDEX_INDEX:
 				
 					$ifp  = fopen_cached($this->dir.'/'.$name.'.btr', 'r+b');
 					$ifpi = fopen_cached($this->dir.'/'.$name.'.idx', 'r+b');
 					
-					if(!$ifp || !$ifpi)
-					{
-						$err = 'Either B-Tree or List index is corrupt';
-						break(2);
-					}
+					if(!$ifp || !$ifpi) throw new Exception('Either B-Tree or List index is corrupt');
 					
 					$pointers = array($ifp, $ifpi);
+					
 					break;
 				default:
 					
-					$err = 'Unknown index type (this error must never happen)';
-					break(2);
+					throw new Exception('Unknown index type (this error must never happen)');
 					
 					break;
 			}
 			
-		}while(false);
-		
-		if(isset($err))
+		}catch(Exception $e)
 		{
 			// should not close anything, as descriptors are cached (they are not cached in case of failure, so no need to worry about this either)
 			$this->unlock_table($name);
-			return $this->set_error($err);
+			//return $this->set_error($err);
+			
+			throw $e;
 		}
 		
 		$uniqid++;
@@ -239,7 +207,7 @@ class YNDataInterface extends YNDb
 		static $results_cache = array(); // array( uniqid => array( entry1, entry2, entry3, ... ) )
 		//static $results_index_cache = array(); // array( uniqid => counter )
 		
-		if(!$resource) return $this->set_error('Invalid resource specified');
+		if(!$resource) /*return $this->set_error*/ throw new Exception('Invalid resource specified');
 		
 		list($name, $columns, $col, $value, $meta, $type, $pointers, $fp, $uniqid, $fields) = $resource;
 		
@@ -260,7 +228,7 @@ class YNDataInterface extends YNDb
 				fseek($pfp, 0, SEEK_END);
 				$end = ftell($pfp);
 				
-				// cannot have values that exceed auto_increment value
+				// cannot have values that exceed auto_increment value;
 				// 'acnt' contains the already-incremented counter, so
 				// we use ">=", as value 'acnt' does not also exist yet
 				if($value >= $this->locked_tables_list[$name]['acnt']) return false;
@@ -312,13 +280,12 @@ class YNDataInterface extends YNDb
 					return false; // all entries already returned
 				}
 				
-				$offset = array_pop($results_cache[$uniqid]); // steadily decreasing number of elements to return until nothing left
+				$offset = array_pop($results_cache[$uniqid]); // succeedingly decreasing number of elements to return until nothing left
 				
 				break;
 			default:
 				
-				$err = 'Unknown index type (this error must never happen)';
-				break(2);
+				throw new Exception('Unknown index type (this error must never happen)');
 				
 				break;
 		}
@@ -333,7 +300,7 @@ class YNDataInterface extends YNDb
 	
 	function closeTable_Index_ExactMatch($resource)
 	{
-		if(!$resource) return $this->set_error('Invalid resource specified');
+		if(!$resource) /*return $this->set_error*/ throw new Exception('Invalid resource specified');
 		
 		return $this->unlock_table($resource[0] /*name*/);
 	}
