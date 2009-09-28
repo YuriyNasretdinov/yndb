@@ -12,6 +12,10 @@ class YNSimpleOptimizer {
 		$this->db = $db;
 	}
 	
+	public function __destruct() {
+		$this->db = null;
+	}
+	
 	public function setQuery($tokens, $hash) {
 		// sanity check
 		if (is_array($tokens)) {

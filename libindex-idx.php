@@ -8,7 +8,7 @@ class YNBTree_Idx
     private $DB = null;
     
     /* $db  -- YNDb object
-       $fp  -- .btr.idx file pointer (r+b)
+       $fp  -- .btr file pointer (r+b)
        $fpi -- .idx file pointer (r+b)
     */
     

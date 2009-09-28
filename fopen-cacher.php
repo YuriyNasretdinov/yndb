@@ -20,6 +20,9 @@ function fopen_cached($name, $mode, $lock = false) // note, that arguments are n
 		
 		$el=(array_shift($fopen_cache));
 		fclose($el['fp']); // fclose releases lock, if it was set
+	}else if(!$fp)
+	{
+		return false; // do not cache fopen() failures
 	}
 	
 	if($lock) @flock($fp, LOCK_EX);

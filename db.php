@@ -33,7 +33,17 @@ class YNDb
 		$uniqid = uniqid();
 		
 		//if(substr($err,0,strlen('Duplicate')) != 'Duplicate') 
-		echo '<div><b>'.$err.' (<a href="#" onclick="var bl=document.getElementById(\''.$uniqid.'\'); if(bl.style.display==\'none\') { bl.style.display=\'\'; this.innerHTML=\'hide\'; }else{ bl.style.display=\'none\'; this.innerHTML=\'backtrace\'; }">backtrace</a><pre id="'.$uniqid.'" style="display: none;">',print_r($tmp=debug_backtrace()),'</pre>)</b></div>';
+		if(!isset($GLOBALS['argc'])) echo '
+			<div><b>'.$err.' (
+					<a href="#" onclick="var bl=document.getElementById(\''.$uniqid.'\'); if(bl.style.display==\'none\') { bl.style.display=\'\'; this.innerHTML=\'hide\'; }else{ bl.style.display=\'none\'; this.innerHTML=\'backtrace\'; }">
+						backtrace
+					</a>
+				
+					<pre id="'.$uniqid.'" style="display: none;">',print_r($tmp=debug_backtrace()),'</pre>
+				)</b></div>';
+		// if $GLOBALS['argc'] is set, then it almost 100% means that script is run from console, so no HTML here
+		else echo "YNDb error: $err\n";
+		
 		$this->error = $err;
 		
 		return false;
@@ -46,17 +56,18 @@ class YNDb
 	
 	/**
 	 * Connect to database with directory $d
+	 * Throws an exception if something is wrong (the only way to avoid instanciating of an object)
 	 *
 	 * @param string $d
 	 * @return bool
 	 */
 	public function __construct($d)
 	{
-		if(!is_dir($d) || !is_writable($d)) return $this->set_error('Database directory is invalid. It must exist, be a directory and be writable.');
+		if(!is_dir($d) || !is_writable($d)) throw new Exception('Database directory is invalid. It must exist, be a directory and be writable.');
 		
 		$rd = realpath($d);
 		
-		if(isset(self::$instances[$rd])) return false; // this behavoir is at least better than a (probably) ability to cause deadlock...
+		if(isset(self::$instances[$rd])) throw new Exception('YNDb is already instanciated with directory "'.$d.'"'); // this behavoir is at least better than a (probably) ability to cause deadlock...
 		self::$instances[$rd] = true;
 		
 		$this->dir = $rd;
@@ -162,7 +173,7 @@ class YNDb
 		{
 			if(!isset($params[$type]))
 			{
-				$params[$type] = false;
+				$params[$type] = array(); // an empty array means zero elements, so sizeof($params['INDEX']) or sizeof($params['UNIQUE']) will return 0
 				continue;
 			}
 			
@@ -175,6 +186,42 @@ class YNDb
 					return $this->set_error($type.'('.$field_name.') field must exist and have INT type');
 				}
 			}
+		}
+		
+		// check for duplicate indexes
+		
+		$aname = $params['AUTO_INCREMENT']['name'];
+		$index = $params['INDEX'];
+		$unique = $params['UNIQUE'];
+		
+		if(in_array($aname, $index) || in_array($aname, $unique))
+		{
+			return $this->set_error('AUTO_INCREMENT field must not be indexed explicitly.');
+		}
+		
+		/*
+		// another possible variant:
+		
+		foreach(array('index','unique') as $idx)
+		{
+			if(in_array($aname, $$idx))
+			{
+				foreach($$idx as $k=>$v) if($v == $aname) unset($$idx[$k]);
+
+				$$idx = array_values($$idx);
+			}
+		}
+		
+		*/
+		
+		if( sizeof(array_unique($index)) != sizeof($index) || sizeof(array_unique($unique)) != sizeof($unique) )
+		{
+			return $this->set_error('One or more fields are indexed more than once.');
+		}
+		
+		if( sizeof($duplicate_idx = array_intersect( $index, $unique )) )
+		{
+			return $this->set_error('You must not specify both INDEX and UNIQUE for any field. Fields with duplicate indexes are: '.implode(', ', $duplicate_idx));
 		}
 		
 		$meta = array();

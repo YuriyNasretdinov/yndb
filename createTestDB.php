@@ -14,7 +14,7 @@ $db->create(
     ),
     array(
         'AUTO_INCREMENT' => 'id',
-        'UNIQUE' => array('id'),
+        // 'UNIQUE' => array('id'), // as there can be no choice for AUTO_INCREMENT field, explicit setting of UNIQUE index is not required and it even causes errors :)
         'INDEX' => array('cust'),
     )
 );

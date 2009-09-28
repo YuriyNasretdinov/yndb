@@ -12,6 +12,8 @@ class YNParser {
 	protected $plans = array();
 	protected $Optimizer = null;
 	
+	protected $db = null; // YNDataInterface reference
+	
 	const TOKEN_WHITESPACE	= 0;
 	const TOKEN_WORD		= 1;
 	const TOKEN_QUOTED_ID	= 2;
@@ -73,6 +75,10 @@ class YNParser {
 		  # 6. illegal characters
 		 (.+?)
 		!x';
+	}
+	
+	public function __destruct() {
+		$this->db = null;
 	}
 	
 	protected function strip() {
