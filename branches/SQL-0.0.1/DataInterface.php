@@ -43,6 +43,54 @@ class YNDataInterface extends YNDb
 		return parent::set_error('DataInterface (internal) error: '.$err);
 	}
 	
+	// checks if table $name exists
+	// one should use getTableStructure() if he wants to check, if the table exists and get the table structure
+	
+	// returns bool
+	
+	function tableExists($name)
+	{
+		return !!fopen_cached($this->dir.'/'.$name.'str', 'r+b', true /* lock table... To be honest, some more general way to lock the file pointers should be used, as we do not need to lock the table here, for example */);
+	}
+	
+	// returns either array(...) with table structure, or false in case the table does not exist
+	// 
+	// if you want to check, if table exists and obtain the table structure, use this method instead of using both tableExists and getTableStructure,
+	// as tableExists() permanently locks the table (this will be fixed some time in the future), while this method does not
+	
+	// you will get an array with the following keys:
+	
+	// 'fields' => array( 'field1' => 'TYPE_1', ..., 'fieldN' => 'TYPE_N' ), // array with field types, field names being lowercase and types being uppercase
+	// 'params' => array( ... ), // the array with index information, with the same structure as second parameter for create() method
+	
+	// 'aname' => 'field_name',  // Auto_increment NAME -- the name of auto_increment (and primary key) field
+	// 'acnt'  => N, // Auto_increment CouNT -- a value of auto_increment counter, which allows you to estimate,
+	//               // how many entries are there in the database. You should not rely on this value, as some
+	//               // entries can be inserted in parallel after you recieve it
+	
+	// 'unique' => array('field1', 'field2', ..., 'fieldN'), // a list of names of columns with UNIQUE index
+	// 'index'  => array('field1', 'field2', ..., 'fieldN'), // a list of names of columns with INDEX  index
+	
+	function getTableStructure($name)
+	{
+		if(!$this->lock_table($name)) return false;
+		
+		$structure = $this->locked_tables_list[$name];
+		unset( $structure['str_fp'], $structure['meta'] ); // remove the fields that are either temporary or not intended for external use
+		
+		$this->unlock_table($name);
+		
+		return $structure;
+	}
+	
+	// provides getter for "dir" property
+	// returns the full path to directory with database files (without the last slash)
+	
+	function getDatabaseDirectory()
+	{
+		return $this->dir;
+	}
+	
 	// returns "resource" for fetchRow
 	
 	// string $name    -- name of table
