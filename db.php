@@ -19,7 +19,7 @@ require(dirname(__FILE__).'/libindex.php');
 
 class YNDb
 {
-	protected $dir = '';
+	protected $dir = ''; // data directory
 	protected $error = '';
 	protected $ins_id = '';
 	protected $I = null; /* Index instance :) */
@@ -355,14 +355,8 @@ class YNDb
 		
 		list($fields, $params, $meta) = unserialize(fread($str_fp, $sz));
 		
-		if(@$params['AUTO_INCREMENT'])
-		{
-			$aname = $params['AUTO_INCREMENT']['name'];
-			@$acnt  = ++$params['AUTO_INCREMENT']['cnt'];
-		}else
-		{
-			$aname = false;
-		}
+		$aname = $params['AUTO_INCREMENT']['name'];
+		@$acnt  = ++$params['AUTO_INCREMENT']['cnt'];
 		
 		return array(
 			'str_fp' => $str_fp,
