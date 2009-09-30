@@ -1,7 +1,8 @@
 <?php
 
-include 'Tokens.php';
-include 'DataInterface.php';
+include YN_HOME . '/Tokens.php';
+include YN_HOME . '/ExecPlan.php';
+include YN_HOME . '/DataInterface.php';
 
 class YNParser {
 	protected $sql = '';
@@ -11,7 +12,6 @@ class YNParser {
 	protected $hash = '';
 	protected $plans = array();
 	protected $Optimizer = null;
-	
 	protected $db = null; // YNDataInterface reference
 	
 	const TOKEN_WHITESPACE	= 0;
@@ -26,13 +26,44 @@ class YNParser {
 	
 	const PLAN_PREFIX = 'YNDBExecPlan_';
 	
+	const REGEXP_STRIP =
+		'/#  # replaceable SQL elements
+			 #
+			 # 1. numeric literals
+			(
+				\\b(?:
+					\\d+\\.\\d*				# 12.3, 123.
+				|	\\d*\\.\\d+				# .123
+				|	\\d+					# 123
+				)(?:[eE][+-]\\d+)?			# +E123, +e123, -E123, -e123
+				\\b
+			)
+				|
+			 # 2. comments
+			(
+				(?:--[^\\n]*)				# single-line
+			|	(?:\\/\\*.*?\\*\\/)				# multi-line
+			)
+				|
+			 # 3. single-quoted strings
+			(
+				# this is somewhat slow, but I found no other way yet:
+				\'(?:[^\']|\'\'|\\\\.)*\'
+			|	 "(?:[^ "]| " "|\\\\.)* "
+				# There is no support for MySQL-like "character set introducers".
+			)
+				|
+			 # 4. quoted identifiers
+			(`[^`]+`)
+		/xS';
+	
 	public function __construct($db) {
 		if (!($db instanceof YNDataInterface)) {
 			throw new Exception('DB must be specified.');
 		}
 		$this->db = $db;
 		// Include the generated execution plans:
-		$glob_pattern = dirname(__FILE__) . '/plans/' . YNParser::PLAN_PREFIX;
+		$glob_pattern = $this->db->getDir() . '/plans/' . YNParser::PLAN_PREFIX;
 		$glob_pat_len = strlen($glob_pattern);
 		foreach (glob($glob_pattern . '*.php') as $_f) {
 			$_h = substr($_f, $glob_pat_len, 32);
@@ -83,43 +114,48 @@ class YNParser {
 	
 	protected function strip() {
 		// stripping literals
-		$replaceNumbers = 
-		'!#  # replaceable sql elements SQL
-			 #
-			 # 1. numeric literals
-			(
-				\\b(?:
-					\\d+\\.\\d*				# 12.3, 123.
-				|	\\d*\\.\\d+				# .123
-				|	\\d+					# 123
-				)(?:[eE][+-]\\d+)?			# +E123, +e123, -E123, -e123
-				\\b
-			)
-				|
-			 # 2. comments
-			(
-				(?:--[^\\n]*)				# single-line
-			|	(?:/\\*.*?\\*/)				# multi-line
-			)
-				|
-			 # 3. single-quoted strings
-			(\'(?:[^\']|\'\')*\')
-		!xS';
 		$i = 0;
-		if (preg_match_all($replaceNumbers, $this->sql, $matches, PREG_OFFSET_CAPTURE, $offset)) {
+		if (preg_match_all(self::REGEXP_STRIP, $this->sql, $matches, PREG_OFFSET_CAPTURE, $offset)) {
 			foreach (array_reverse($matches[0]) as $m) {
 				$val = $m[0];
 				$lenV = strlen($val);
 				$ofsV = $m[1];
-				if ($val[0] == '/' or $val[0] == '-') {
-					// it's a comment
-					$this->sql = substr_replace($this->sql, '', $ofsV, $lenV);
-				} else {
-					$this->bindValues[$i] = $val;
-					$bnd = ' ' . $i . ' ';
-					$lenB = strlen($bnd);
-					$this->sql = substr_replace($this->sql, $bnd, $ofsV, $lenV);
-					$i++;
+				switch ($val[0]) { 
+					case '/':
+					case '-':
+						// It's a comment, remove it.
+						$this->sql = substr_replace($this->sql, '', $ofsV, $lenV);
+						break;
+					case '`':
+						// Leave quoted identifiers intact.
+						break;
+					case '"':
+					case "'":
+						// Process all special sequences inside a string.
+						$q = $val[0];
+						$val = str_replace($q . $q, $q, substr($val, 1, strlen($val) - 2));
+						// Compliance with MySQL:
+						$val = str_replace(
+							array(
+								'\\0', "\\'", '\\"', '\\b',
+								'\\n', '\\r', '\\t', '\\Z',
+								'\\\\','\\%', '\\_'
+							),
+							array(
+								"\0",  "'",   '"',   chr(8),
+								"\n",  "\r",  "\t",  chr(26),
+								'\\',  '%',   '_'
+							),
+							$val
+						);
+						// There is no break, so we proceed to substitution.
+					default:
+						// Bind values and substitute them with placeholders.
+						$this->bindValues[$i] = $val;
+						$bnd = ' ' . $i . ' ';
+						$lenB = strlen($bnd);
+						$this->sql = substr_replace($this->sql, $bnd, $ofsV, $lenV);
+						$i++;
 				}
 			}
 		}
@@ -157,9 +193,9 @@ class YNParser {
 	}
 	
 	protected function getOptimizer() {
+		// lazy Optimizer creation
 		if (!isset($this->Optimizer)) {
-			// lazy Optimizer creation
-			include('SimpleOptimizer.php');
+			include(YN_HOME . '/SimpleOptimizer.php');
 			$this->Optimizer = new YNSimpleOptimizer($this->db);
 		}
 		$this->Optimizer->setQuery($this->tokens, $this->hash);
@@ -179,10 +215,15 @@ class YNParser {
 	}
 	
 	public function __test($sql) {
+		echo "============ FILES : \n\t" . join("\n\t", get_included_files()) . "\n\n";
 		echo "============ PLANS :\n\t" . join("\n\t", array_keys($this->plans)) . "\n\n";
 		echo "============ TOKEN REGEXP :\n" . $this->token_regexp . "\n\n";
 		echo "============ INITIAL SQL :\n" . $sql . "\n\n";
-		$this->getPlan($sql);
+		try {
+			$this->getPlan($sql);
+		} catch (Exception $e) {
+			echo get_class($e) . ": " . $e->getMessage() . $e->getTraceAsString() . "\n\n";
+		}
 		echo "============ STRIPPED SQL :\n" . $this->sql . "\n\n";
 		echo "============ BIND VALUES :\n" . var_export($this->bindValues, true) . "\n\n";
 		echo "============ TOKENS :\n";
@@ -196,7 +237,7 @@ class YNParser {
 
 if (array_shift(get_included_files()) === __FILE__) {
 	if (isset($argv[1])) {
-		$yp = new YNParser();
+		$yp = new YNParser(new YNDataInterface('test'));
 		$yp->__test($argv[1]);
 	} else {
 		echo "Usage: php " . basename(__FILE__) . " <sql text>\n";

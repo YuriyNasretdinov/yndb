@@ -1,6 +1,6 @@
 <?
 
-include('db.php');
+include(YN_HOME . '/db.php');
 
 // a data interface to table
 // an extension of YNDb class,
@@ -41,6 +41,15 @@ class YNDataInterface extends YNDb
 	function set_error($err)
 	{
 		return parent::set_error('DataInterface (internal) error: '.$err);
+	}
+	
+	/**
+	 * Returns the data directory name.
+	 *
+	 * @return 	string	data directory name
+	 */
+	function getDir() {
+		return $this->dir;
 	}
 	
 	// checks if table $name exists

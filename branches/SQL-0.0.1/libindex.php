@@ -6,8 +6,8 @@
 
 */
 
-include('libindex-b-tree.php');
-include('libindex-idx.php');
+include(YN_HOME . '/libindex-b-tree.php');
+include(YN_HOME . '/libindex-idx.php');
 
 class YNIndex
 {
