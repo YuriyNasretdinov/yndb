@@ -13,9 +13,11 @@ define('YNDB_ROW_DELETED',  1);
 define('YNDB_ROW_SPLIT',    2);
 define('YNDB_ROW_CONTINUE', 3);
 
-require(dirname(__FILE__).'/fopen-cacher.php');
-//require(dirname(__FILE__).'/rfio.php'); // reversable file IO
-require(dirname(__FILE__).'/libindex.php');
+define('YN_HOME', dirname(__FILE__)); // Home directory for all YN* classes.
+
+require(YN_HOME . '/fopen-cacher.php');
+//require(YN_HOME . '/rfio.php'); // reversable file IO
+require(YN_HOME . '/libindex.php');
 
 class YNDb
 {
@@ -272,6 +274,7 @@ class YNDb
 		
 		fputs($str_fp, serialize(array($fields,$params,$meta)));
 		fclose($str_fp);
+		mkdir($this->dir . '/plans'); // create directory for execution plans
 		
 		return true;
 	}

@@ -6,7 +6,7 @@ class YNSimpleOptimizer {
 	protected $db = null;
 	protected $tokens = array();
 	protected $hash = '';
-	protected $running_table = '';
+	protected $driving_table = '';
 	
 	public function __construct($db) {
 		$this->db = $db;
@@ -44,7 +44,7 @@ class YNSimpleOptimizer {
 		}
 		$table_name = $table_token[1];
 		# TODO: check if the table exists
-		$this->running_table = $table_name;
+		$this->driving_table = $table_name;
 	}
 
 	public function createPlan() {
@@ -69,15 +69,15 @@ class YNSimpleOptimizer {
 		
 		// Validate ORDER BY clause:
 		if (isset($clauses['ORDER'])) {
-			throw new Exception('Not implemented yet.');
+			throw new Exception('Not implemented.');
 		}
  		// Validate GROUP BY clause:
 		if (isset($clauses['GROUP'])) {
-			throw new Exception('Not implemented yet.');
+			throw new Exception('Not implemented.');
 		}
 		// Validate WHERE clause:
 		if (isset($clauses['WHERE'])) {
-			throw new Exception('Not implemented yet.');
+			throw new Exception('Not implemented.');
 			//$this->validateWhere($clauses['WHERE'], $last_token_id - 1);
 			//$last_token_id = $clauses['WHERE'];
 		}
@@ -92,36 +92,33 @@ class YNSimpleOptimizer {
 		// Generate the execution plan class file:
 		$export_tokens = var_export($this->tokens, true);
 		$plan_class_name = YNParser::PLAN_PREFIX . $this->hash;
-		$plan_class_path = dirname(__FILE__) . '/plans/' . $plan_class_name . '.php';
+		$plan_dir_name = $this->db->getDir() . '/plans';
+		if (is_dir($plan_dir_name) and is_writeable($plan_dir_name)) {
+			$plan_class_path = $plan_dir_name . '/' . $plan_class_name . '.php';
+		} else {
+			throw new Exception('Could not create file: ' . $plan_class_path);
+		}
 		file_put_contents(
 			$plan_class_path,
 			<<<EOD
 <?php
 
-class $plan_class_name {
-	protected \$db = null;
+class $plan_class_name extends YNExecPlan {
 	protected \$rt = '';
 	protected \$r = array();
 	
-	function __construct() {
-		\$this->rt = '$this->running_table';
+	public function __construct() {
+		parent::__construct();
+		\$this->rt = '$this->driving_table';
 		echo 'Created ' . __CLASS__ . ".\n";
 	}
 	
-	function setDB(\$db) {
-		\$this->db = \$db;
-	}
-	
-	function execute() {
+	public function execute() {
 		\$this->r = \$this->db->openTable_FullScan(\$this->rt);
 	}
 		
-	function fetch() {
+	public function fetch() {
 		return \$this->db->fetchRow_FullScan(\$this->r);
-	}
-
-	function __test() {
-		echo 'Ran ' . __CLASS__ . "::__test().\n";
 	}
 }
 
@@ -136,15 +133,6 @@ EOD
 		$plan->setDB($this->db);
 		$plan->__test();
 		return $plan;
-	}
-}
-
-if (array_shift(get_included_files()) === __FILE__) {
-	if (isset($argv[1])) {
-		$yo = new YNSimpleOptimizer();
-		$yo->__test($argv[1]);
-	} else {
-		echo "Usage: php " . basename(__FILE__) . " <sql text>\n";
 	}
 }
 

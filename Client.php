@@ -9,7 +9,9 @@
  * for it may slightly change in future versions without any notice.
  */
 
-include 'Parser.php';
+define('YN_HOME', dirname(__FILE__)); // Home directory for all YN* classes.
+
+include YN_HOME . '/Parser.php';
 
 class YNResource {
 	protected $db = null;
@@ -44,12 +46,13 @@ class YNResource {
 
 class YNClient {
 	protected $db = null;
+	protected $dir = '';
 	protected $parser = null;
 	
 	public function __construct($dir) {
-		// eventually, YNDataInterface will support exceptions, as intended here
-		$this->db = new YNDataInterface($dir);
-		$this->parser = new YNParser($this->db);
+		$this->dir = $dir;
+		$this->db = new YNDataInterface($this->dir);
+		$this->parser = new YNParser($this->db, $this->dir);
 	}
 	
 	// removing circular references, so not causing a memory leak
