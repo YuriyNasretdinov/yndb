@@ -222,9 +222,10 @@ Last ins_id: '.$db->insert_id().'<br>
 		
 		echo 'Removing all previous tables.<br>';
 		//flush();
-		$dh = opendir('./data');
-		while($f = readdir($dh)) if($f[0]!='.') unlink('./data/'.$f);
-		closedir($dh);
+		//$dh = opendir('./data');
+		//while($f = readdir($dh)) if($f[0]!='.') unlink('./data/'.$f);
+		//closedir($dh);
+		system('rm -r ./data');
 		echo 'Done.<br>';
 		
 		echo 'Creating table<br>';
