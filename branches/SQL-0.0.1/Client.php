@@ -9,9 +9,7 @@
  * for it may slightly change in future versions without any notice.
  */
 
-define('YN_HOME', dirname(__FILE__)); // Home directory for all YN* classes.
-
-include YN_HOME . '/Parser.php';
+require 'Parser.php';
 
 class YNResource {
 	protected $db = null;

@@ -92,7 +92,7 @@ class YNSimpleOptimizer {
 		// Generate the execution plan class file:
 		$export_tokens = var_export($this->tokens, true);
 		$plan_class_name = YNParser::PLAN_PREFIX . $this->hash;
-		$plan_dir_name = $this->db->getDir() . '/plans';
+		$plan_dir_name = $this->db->getDatabaseDirectory() . '/plans';
 		if (is_dir($plan_dir_name) and is_writeable($plan_dir_name)) {
 			$plan_class_path = $plan_dir_name . '/' . $plan_class_name . '.php';
 		} else {
