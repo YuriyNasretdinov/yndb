@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-include('YNDb/db.php');
+include('YNDb/core/Db.php');
 
 if(!isset($_REQUEST['act']) && isset($argv[1])) $_REQUEST['act'] = $argv[1];
 
@@ -226,6 +226,7 @@ Last ins_id: '.$db->insert_id().'<br>
 		//while($f = readdir($dh)) if($f[0]!='.') unlink('./data/'.$f);
 		//closedir($dh);
 		system('rm -r ./data');
+		mkdir('./data');
 		echo 'Done.<br>';
 		
 		echo 'Creating table<br>';

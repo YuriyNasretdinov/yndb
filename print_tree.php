@@ -1,7 +1,7 @@
 <?
 $fp = fopen($argv[1], 'rb');
 
-include('YNDb/libindex-b-tree.php');
+include('YNDb/core/BTree.php');
 
 class ErrorPrinter
 {

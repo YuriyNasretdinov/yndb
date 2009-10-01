@@ -15,7 +15,7 @@ class ErrorPrinter
 
 $errpr = new ErrorPrinter();
 
-include('libindex-b-tree.php');
+include('YNDb/core/BTree.php');
 
 fclose(fopen('btr.dat', 'wb')); // clear previous contents and create file
 
