@@ -2,7 +2,7 @@
 
 echo "SimpleOptimizer included.\n";
 
-class YNSimpleOptimizer {
+final class YNSimpleOptimizer {
 	protected $db = null;
 	protected $tokens = array();
 	protected $hash = '';

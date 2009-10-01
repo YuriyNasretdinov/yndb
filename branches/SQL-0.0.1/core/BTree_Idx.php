@@ -2,7 +2,7 @@
 // Realization of index, dependant on B-TREE
 // The write methods of the class must not be called simultaneously by several processes
 
-class YNBTree_Idx
+final class YNBTree_Idx
 {
     private $BTR = null;
     private $DB = null;

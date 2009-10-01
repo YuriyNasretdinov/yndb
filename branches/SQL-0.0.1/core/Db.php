@@ -1,8 +1,10 @@
 <?php
 /* PHP >= 5 */ 
 
-require 'fopen-cacher.php';
-require 'Index.php';
+if(!defined('YNDB_HOME')) define('YNDB_HOME', dirname(__FILE__));
+
+require YNDB_HOME.'/fopen-cacher.php';
+require YNDB_HOME.'/Index.php';
 
 
 // some runtime-defined constants that cannot be put into the class definition (hate this in PHP, but perhaps there is no choice)
