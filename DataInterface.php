@@ -1,6 +1,6 @@
 <?
 
-include(YN_HOME . '/db.php');
+require 'core/Db.php';
 
 // a data interface to table
 // an extension of YNDb class,
@@ -43,15 +43,6 @@ class YNDataInterface extends YNDb
 		return parent::set_error('DataInterface (internal) error: '.$err);
 	}
 	
-	/**
-	 * Returns the data directory name.
-	 *
-	 * @return 	string	data directory name
-	 */
-	function getDir() {
-		return $this->dir;
-	}
-	
 	// checks if table $name exists
 	// one should use getTableStructure() if he wants to check, if the table exists and get the table structure
 	
@@ -92,8 +83,11 @@ class YNDataInterface extends YNDb
 		return $structure;
 	}
 	
-	// provides getter for "dir" property
-	// returns the full path to directory with database files (without the last slash)
+	/**
+	 * Returns the data directory name.
+	 *
+	 * @return 	string	data directory name
+	 */
 	
 	function getDatabaseDirectory()
 	{

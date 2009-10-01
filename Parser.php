@@ -1,8 +1,8 @@
 <?php
 
-include YN_HOME . '/Tokens.php';
-include YN_HOME . '/ExecPlan.php';
-include YN_HOME . '/DataInterface.php';
+require 'Tokens.php';
+require 'ExecPlan.php';
+require 'DataInterface.php';
 
 class YNParser {
 	protected $sql = '';
@@ -63,7 +63,7 @@ class YNParser {
 		}
 		$this->db = $db;
 		// Include the generated execution plans:
-		$glob_pattern = $this->db->getDir() . '/plans/' . YNParser::PLAN_PREFIX;
+		$glob_pattern = $this->db->getDatabaseDirectory() . '/plans/' . YNParser::PLAN_PREFIX;
 		$glob_pat_len = strlen($glob_pattern);
 		foreach (glob($glob_pattern . '*.php') as $_f) {
 			$_h = substr($_f, $glob_pat_len, 32);
@@ -195,7 +195,7 @@ class YNParser {
 	protected function getOptimizer() {
 		// lazy Optimizer creation
 		if (!isset($this->Optimizer)) {
-			include(YN_HOME . '/SimpleOptimizer.php');
+			require 'SimpleOptimizer.php';
 			$this->Optimizer = new YNSimpleOptimizer($this->db);
 		}
 		$this->Optimizer->setQuery($this->tokens, $this->hash);
