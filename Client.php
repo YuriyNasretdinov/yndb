@@ -9,9 +9,11 @@
  * for it may slightly change in future versions without any notice.
  */
 
+if(!defined('YN_HOME')) define('YN_HOME', dirname(__FILE__));
+
 require 'Parser.php';
 
-class YNResource {
+final class YNResource {
 	protected $db = null;
 	protected $sql = null;
 	protected $parser = null;
@@ -42,7 +44,7 @@ class YNResource {
 	}
 }
 
-class YNClient {
+final class YNClient {
 	protected $db = null;
 	protected $dir = '';
 	protected $parser = null;

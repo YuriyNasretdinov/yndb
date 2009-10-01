@@ -1,10 +1,10 @@
 <?php
 
-require 'Tokens.php';
-require 'ExecPlan.php';
-require 'DataInterface.php';
+require YN_HOME.'/Tokens.php';
+require YN_HOME.'/ExecPlan.php';
+require YN_HOME.'/DataInterface.php';
 
-class YNParser {
+final class YNParser {
 	protected $sql = '';
 	protected $token_regexp = '';
 	protected $bindValues = array();

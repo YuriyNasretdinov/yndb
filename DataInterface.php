@@ -1,6 +1,7 @@
 <?
+// class for internal usage!
 
-require 'core/Db.php';
+require YN_HOME.'/core/Db.php';
 
 // a data interface to table
 // an extension of YNDb class,
@@ -21,7 +22,7 @@ define('DI_INDEX_PRIMARY', 0);
 define('DI_INDEX_INDEX',   1);
 define('DI_INDEX_UNIQUE',  2);
 
-class YNDataInterface extends YNDb
+final class YNDataInterface extends YNDb
 {
 	
 	function __construct($dir)

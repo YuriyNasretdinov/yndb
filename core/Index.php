@@ -6,10 +6,10 @@
 
 */
 
-require 'BTree.php';
-require 'BTree_Idx.php';
+require YNDB_HOME.'/BTree.php';
+require YNDB_HOME.'/BTree_Idx.php';
 
-class YNIndex
+final class YNIndex
 {
     protected $DB = null; /* DB instance */
 	public $BTR = null; /* YNBTree instance */
