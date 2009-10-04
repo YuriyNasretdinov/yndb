@@ -1,9 +1,11 @@
 <?
 // descriptor caching (can really improve speed in some cases)
 
+$fopen_cache = array();
+
 function fopen_cached($name, $mode, $lock = false) // note, that arguments are not the same as fopen()!
 {
-	static $fopen_cache = array();
+	global $fopen_cache;
 	
 	$key = $name.':'.$mode;
 	if(isset($fopen_cache[$key])) return $fopen_cache[$key]['fp'];
@@ -25,10 +27,46 @@ function fopen_cached($name, $mode, $lock = false) // note, that arguments are n
 		return false; // do not cache fopen() failures
 	}
 	
-	if($lock) @flock($fp, LOCK_EX);
+	if($lock!==false)// @flock($fp, $lock);
+	{
+		print_r(debug_backtrace());
+	}
 	
-	$fopen_cache[$name.':'.$mode] = array('fp'=>$fp, 'mode'=>$mode/*, 'locked'=>$lock*/);
+	$fopen_cache[$name.':'.$mode] = array('fp'=>$fp, 'mode'=>$mode, 'locked'=>$lock);
 	
 	return $fp;
+}
+
+// note that you must pass not the resource, but a name of file
+function flock_cached($name, $mode, $operation)
+{
+	global $fopen_cache;
+	
+	$key = $name.':'.$mode;
+	if(!isset($fopen_cache[$key])) return false;
+	
+	$entry = &$fopen_cache[$key];
+	
+	switch($operation)
+	{
+		case LOCK_UN:
+			fflush($entry['fp']);
+			if($entry['locked']!==false) flock($entry['fp'], LOCK_UN);
+			$entry['locked'] = false;
+			return true;
+		case LOCK_SH:
+		case LOCK_EX:
+			if($entry['locked']!==false)
+			{
+				if($operation == $entry['locked']) return true;
+				flock($entry['fp'], LOCK_UN); // relock the file pointer
+				flock($entry['fp'], $operation);
+				return true;
+			}
+			flock($entry['fp'], $operation);
+			return true;
+		default:
+			throw new Exception('This type of lock is not supported');
+	}
 }
 ?>

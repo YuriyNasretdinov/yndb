@@ -51,7 +51,7 @@ final class YNDataInterface extends YNDb
 	
 	function tableExists($name)
 	{
-		return !!fopen_cached($this->dir.'/'.$name.'str', 'r+b', true /* lock table... To be honest, some more general way to lock the file pointers should be used, as we do not need to lock the table here, for example */);
+		return !!fopen_cached($this->dir.'/'.$name.'str', 'r+b');
 	}
 	
 	// returns either array(...) with table structure, or false in case the table does not exist
@@ -355,6 +355,79 @@ final class YNDataInterface extends YNDb
 		if(!$resource) /*return $this->set_error*/ throw new Exception('Invalid resource specified');
 		
 		return $this->unlock_table($resource[0] /*name*/);
+	}
+	
+	// the same as openTable_Index_ExactMatch, but instead of value there is $values list array(value1, value2, ...)
+	
+	protected $EML_opened_tables = array(/* 'hash' => array(resource1, resource2, ...), */);
+	
+	function openTable_Index_ExactMatchList($name, $columns, $col, $values)
+	{
+		static $i = 0;
+		
+		if(!is_array($values)) throw new Exception('Values list should be a list!');
+		
+		$res = array();
+		$values = array_unique($values); // all values are going to be unique, and so all the returned rows are unique too
+		
+		foreach($values as $v) $res[] = $this->openTable_Index_ExactMatch($name, $columns, $col, $v);
+		
+		$i++;
+		
+		$this->EML_opened_tables[$i] = $res;
+		
+		return $i;
+	}
+	
+	function fetchRow_Index_ExactMatchList($resource)
+	{
+		$i = $resource;
+		
+		if(!$i || !isset($this->EML_opened_tables[$i])) throw new Exception('Invalid resource specified');
+		
+		$cache = &$this->EML_opened_tables[$i];
+		$res = false;
+		
+		//print_r($cache);
+		
+		while(!$res && sizeof($cache))
+		{
+			$el = array_pop($cache);
+			$res = $this->fetchRow_Index_ExactMatch($el);
+			if(!$res) $this->closeTable_Index_ExactMatch($el);
+			
+			//echo '<br>res: ', print_r($res);
+		}
+		
+		if(!$res && !sizeof($cache))
+		{
+			unset($this->EML_opened_tables[$i]);
+			return false;
+		}
+		
+		$cache[] = $el; // return the resource back, as it may return more than one result
+		
+		return $res;
+	}
+	
+	function closeTable_Index_ExactMatchList($resource)
+	{
+		return true; // all required actions are already performed in fetchRow
+	}
+	
+	function openTable_Index_Range($name, $columns, $col, $min, $max)
+	{
+		return $this->openTable_Index_ExactMatchList($name, $columns, $col, range($min,$max));
+	}
+	
+	function fetchRow_Index_Range($resource)
+	{
+		return $this->fetchRow_Index_ExactMatchList($resource);
+	}
+	
+	function closeTable_Index_Range($resource)
+	{
+		return $this->closeTable_Index_ExactMatchList($resource);
 	}
 }
 

@@ -293,7 +293,7 @@ class YNDb
 	
 	// the required structure could be obtained using $this->locked_tables_list[$name] (better keep it read-only)
 	
-	public function lock_table($name)
+	public function lock_table($name, $excl = false) // lock the table exclusively (required for writes)?
 	{
 		if(!isset($this->locked_tables_list[$name]))
 		{
@@ -307,6 +307,8 @@ class YNDb
 		{
 			$this->locked_tables_locks_count[$name]++;
 		}
+		
+		if($excl) flock_cached($name, 'r+b', LOCK_EX);
 		
 		return true;
 	}
@@ -332,7 +334,7 @@ class YNDb
 			
 			$res = $this->locked_tables_list[$name];
 			
-			if($this->read_struct_end($res))
+			if($this->read_struct_end($res, $name))
 			{
 				unset($this->locked_tables_list[$name]);
 				return true;
@@ -344,11 +346,12 @@ class YNDb
 		
 	}
 	
-	protected function read_struct_start($name /* table name */)
+	protected function read_struct_start($name /* table name */) // sets the shared lock! (use lock_table() to set exclusive lock)
 	{
-		/*if(!is_readable($this->dir.'/'.$name.'.str') || !is_readable($this->dir.'/'.$name.'.dat')) return $this->set_error('File with table structure or with table data could not be read.');*/
+		if(!$str_fp = fopen_cached($path = $this->dir.'/'.$name.'.str', 'r+b'/*, true /* lock the file pointer */)) return $this->set_error('File with table structure is corrupt!');
 		
-		if(!$str_fp = fopen_cached($this->dir.'/'.$name.'.str', 'r+b', true /* lock the file pointer */)) return $this->set_error('File with table structure is corrupt!');
+		flock_cached($path, 'r+b', LOCK_SH);
+		
 		//@flock($str_fp, LOCK_EX);
 		
 		fseek($str_fp, 0, SEEK_END);
@@ -372,11 +375,13 @@ class YNDb
 		);
 	}
 	
-	protected function read_struct_end($res)
+	protected function read_struct_end($res, $name)
 	{
 		/*$str_fp = $res['str_fp'];
 		@flock($str_fp, LOCK_UN);
 		fclose($str_fp);*/
+		
+		flock_cached($name, 'r+b', LOCK_UN);
 		
 		//fflush($str_fp);
 		
@@ -388,7 +393,7 @@ class YNDb
 	public function insert($name, $data)
 	{
 		$st = microtime(true);
-		if(!$this->lock_table($name)) return false;
+		if(!$this->lock_table($name, true)) return false;
 		$GLOBALS['lock_time'] += microtime(true)-$st;
 		
 		$str_res = $this->locked_tables_list[$name];
@@ -966,7 +971,7 @@ class YNDb
 	
 	public function delete($name, $crit = array())
 	{
-		if(!$this->lock_table($name)) return false;
+		if(!$this->lock_table($name, true)) return false;
 		$str_res = $this->locked_tables_list[$name];
 		
 		extract($str_res);
@@ -1078,7 +1083,7 @@ class YNDb
 	
 	public function update($name, $crit, $new_data)
 	{
-		if(!$this->lock_table($name)) return false;
+		if(!$this->lock_table($name, true)) return false;
 		$str_res = $this->locked_tables_list[$name];
 		
 		extract($str_res);
