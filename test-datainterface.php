@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-include 'YNDb/DataInterface.php';
+include 'YNDb/Client.php';
 
 function print_header($res)
 {
@@ -163,6 +163,82 @@ echo '<h3>Using index:</h3>';
 			}
 
 			$DI->closeTable_Index_ExactMatch($dd);
+
+			echo 'DataInterface took '.round( microtime(true) - $start_time, 4 ).' sec ('.$i.' results)<br>';
+
+			if($i != 1) die('Test failed for RAND field');
+			
+echo '<h3>Using indexList:</h3>';
+
+		echo 'Fetching:<br><br>';
+
+		echo 'id: '.$random_pri.'<br>';
+		echo 'bad_rand: '.$random_idx.'<br>';
+		echo 'rand: '.$random_uni.'<br>';
+
+		echo '<h4>id (PRIMARY)</h4>';
+
+			$start_time = microtime(true);
+
+			$i = 0;
+
+			$dd = $DI->openTable_Index_ExactMatchList('test3', array('rand', 'another_rand'), 'id', array($random_pri, -1, 1)) or die($DI->get_error());
+
+			while($res = $DI->fetchRow_Index_ExactMatchList($dd))
+			{
+				$i++;
+
+				//if(!$i++) print_header($res);
+
+				//print_res($res);
+			}
+
+			$DI->closeTable_Index_ExactMatchList($dd);
+
+			echo 'DataInterface took '.round( microtime(true) - $start_time, 4 ).' sec ('.$i.' results)<br>';
+
+			if($i != 2) die('Test failed for ID field');
+		echo '<h4>bad_rand (INDEX)</h4>';
+
+			$start_time = microtime(true);
+
+			$i = 0;
+
+			$dd = $DI->openTable_Index_ExactMatchList('test3', array('rand', 'another_rand'), 'bad_rand', array($random_idx, -1, $random_idx)) or die($DI->get_error());
+
+			while($res = $DI->fetchRow_Index_ExactMatchList($dd))
+			{
+				$i++;
+
+				//if(!$i++) print_header($res);
+
+				//print_res($res);
+			}
+
+			$DI->closeTable_Index_ExactMatchList($dd);
+
+			echo 'DataInterface took '.round( microtime(true) - $start_time, 4 ).' sec ('.$i.' results)<br>';
+
+			if($i != sizeof( $DI->select('test3', array('cond' => 'bad_rand = '.$random_idx)) )) die('Test failed for BAD_RAND field');
+
+		echo '<h4>rand (UNIQUE)</h4>';
+
+			$start_time = microtime(true);
+
+			$i = 0;
+
+			$dd = $DI->openTable_Index_ExactMatchList('test3', array('rand', 'another_rand'), 'rand', array($random_uni, -1, $random_uni)) or die($DI->get_error());
+
+			while($res = $DI->fetchRow_Index_ExactMatchList($dd))
+			{
+				$i++;
+
+				//if(!$i++) print_header($res);
+
+				//print_res($res);
+			}
+
+			$DI->closeTable_Index_ExactMatchList($dd);
 
 			echo 'DataInterface took '.round( microtime(true) - $start_time, 4 ).' sec ('.$i.' results)<br>';
 
